@@ -102,6 +102,18 @@ api.MapPost("/reset", (HttpContext ctx) => {
     if (ctx.Request.Cookies.TryGetValue("drib-session", out var id)) sessions.TryRemove(id, out var removed);
     ctx.Response.Cookies.Delete("drib-session"); return Results.Ok(new { deleted = true });
 });
+api.MapGet("/plan", async (HttpContext ctx) => {
+    var lesson = Current(ctx); if (lesson == null) return Results.NotFound();
+    await lesson.Gate.WaitAsync(ctx.RequestAborted);
+    try {
+        if (!lesson.Finished) return Results.Conflict();
+        var text = "ДрібКрок — мій план повторення\n\n" +
+            $"3 вправи · {lesson.CorrectSteps} правильних кроків · {lesson.Attempts} спроб · {lesson.Hints} підказок.\n\n" +
+            string.Join("\n", lesson.Plan().Select((p,i) => $"{i+1}. {p}")) +
+            "\n\nЦе рекомендації для тренування, а не шкільна оцінка.";
+        return Results.File(System.Text.Encoding.UTF8.GetBytes("\uFEFF" + text), "text/plain; charset=utf-8", "DribKrok-plan.txt");
+    } finally { lesson.Gate.Release(); }
+});
 app.Run();
 public record Submission(string? Answer, string? Reasoning, bool ApiConsent, int Revision);
 public record RevisionRequest(int Revision);

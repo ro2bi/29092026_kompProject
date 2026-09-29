@@ -92,7 +92,7 @@ public sealed class Lesson
             {
                 valid = a == e.A * (Denominator / e.B) && c == e.C * (Denominator / e.D);
                 if (valid) Work.Add($"Твоє зведення: {a}/{Denominator} + {c}/{Denominator}");
-                else if (a == e.A || c == e.C) evidence = "unscaled_numerator";
+                else if ((Denominator != e.B && a == e.A) || (Denominator != e.D && c == e.C)) evidence = "unscaled_numerator";
             }
         }
         else if (MathTools.TryFraction(answer, out int n, out int d))

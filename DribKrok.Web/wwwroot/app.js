@@ -72,17 +72,17 @@ $('answer-form').addEventListener('submit',event=>{event.preventDefault();action
   const oldStage=state.stage;
   state=await request('answer',{answer:$('answer').value,reasoning:$('reasoning').value,apiConsent:$('api-consent').checked,revision:state.revision});
   if(state.stage!==oldStage){$('answer').value='';$('reasoning').value='';}
-  draw();$('feedback').focus({preventScroll:true});
+  draw();$('feedback').focus();
 });});
-$('hint').addEventListener('click',()=>action(async()=>{state=await request('hint',{revision:state.revision});draw();$('feedback').focus({preventScroll:true});}));
+$('hint').addEventListener('click',()=>action(async()=>{state=await request('hint',{revision:state.revision});draw();$('feedback').focus();}));
 $('next').addEventListener('click',()=>action(async()=>{state=await request('next',{revision:state.revision});$('answer').value='';$('reasoning').value='';draw();if(!state.finished)$('answer').focus();else $('summary').scrollIntoView({behavior:'smooth'});}));
-$('delete').addEventListener('click',()=>action(async()=>{await request('reset',{});state=null;$('answer').value='';$('reasoning').value='';$('api-consent').checked=false;mode();draw();$('start').focus();}));
+function erase(){return action(async()=>{await request('reset',{});state=null;$('answer').value='';$('reasoning').value='';$('api-consent').checked=false;mode();draw();$('start').focus();});}
+$('delete').addEventListener('click',erase);
+$('delete-mobile').addEventListener('click',erase);
 $('api-consent').addEventListener('change',mode);
 $('download').addEventListener('click',()=>{
   if(!state?.finished)return;
-  const text='ДрібКрок — мій план повторення\n\n'+$('summary-stats').textContent+'\n\n'+state.plan.map((p,i)=>`${i+1}. ${p}`).join('\n')+'\n\nЦе рекомендації для тренування, а не шкільна оцінка.';
-  const url=URL.createObjectURL(new Blob(['\ufeff'+text],{type:'text/plain;charset=utf-8'}));
-  const a=document.createElement('a');a.href=url;a.download='DribKrok-plan.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const a=document.createElement('a');a.href='/api/plan';a.download='DribKrok-plan.txt';a.click();
 });
 action(async()=>{
   const health=await request('health');configured=health.apiConfigured;
