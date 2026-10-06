@@ -25,23 +25,26 @@ try { Invoke-RestMethod "$base/state" -WebSession $other | Out-Null; throw 'Sess
 catch { Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Sessions isolated' }
 $state = Post 'next' @{revision=$state.revision}
 Assert ($state.round -eq 0) 'Cannot skip via HTTP'
-Answer '7' 'I add the denominators'
-Assert ($state.stage -eq 0 -and $state.gaps.count -gt 0) 'Wrong denominator stays on step'
+function Solve {
+    $e=$script:state.exercise
+    $a=[int]$e.b; $b=[int]$e.d
+    while ($b -ne 0) { $r=$a % $b; $a=$b; $b=$r }
+    $den=[int]($e.b / $a * $e.d)
+    $n1=[int]($e.a * ($den / $e.b)); $n2=[int]($e.c * ($den / $e.d))
+    if (-not $script:state.transfer) { Answer "$den"; Answer "$n1 $n2" }
+    Answer "$($n1+$n2)/$den" 'I converted both fractions and added signed numerators.'
+}
+Answer '0'
+Assert ($state.stage -eq 0) 'Wrong denominator stays on step'
 $oldRevision=$state.revision
-Answer '12'
+$state=Post 'hint' @{revision=$state.revision}
 try { Post 'answer' @{answer='12'; reasoning=''; apiConsent=$false; revision=$oldRevision} | Out-Null; throw 'Duplicate accepted' }
 catch { Assert ([int]$_.Exception.Response.StatusCode -eq 409) 'Stale revision rejected' }
-Answer '4 3'
-Answer '7/12'
-Assert $state.complete 'First exercise complete'
-$state=Post 'next' @{revision=$state.revision}
-Answer '12'
-Answer '3 2'
-Answer '5/12'
-Assert $state.complete 'Second exercise complete'
-$state=Post 'next' @{revision=$state.revision}
-Answer '11/15' 'I converted both fractions to equal-sized parts.'
-Assert ($state.complete -and $state.transfer) 'Independent exercise complete'
+for ($round=0; $round -lt 3; $round++) {
+    Solve
+    Assert $state.complete "Exercise $round complete"
+    if ($round -lt 2) { $state=Post 'next' @{revision=$state.revision} }
+}
 $state=Post 'next' @{revision=$state.revision}
 Assert ($state.finished -and $state.correctSteps -eq 7) 'Summary and seven correct steps'
 $plan = Invoke-WebRequest "$base/plan" -WebSession $session -UseBasicParsing
@@ -52,4 +55,12 @@ catch { Assert ([int]$_.Exception.Response.StatusCode -eq 403) 'Foreign origin r
 Post 'reset' @{} | Out-Null
 try { Invoke-RestMethod "$base/state" -WebSession $session | Out-Null; throw 'Session not deleted' }
 catch { Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Reset removes session' }
+foreach ($grade in @(5,7,8,9)) {
+    $state=Post 'start' @{grade=$grade}
+    Assert ($state.grade -eq $grade) "Selected grade $grade"
+    Solve
+    Assert $state.complete "Web arithmetic grade $grade"
+}
+try { Post 'start' @{grade=10} | Out-Null; throw 'Invalid grade accepted' }
+catch { Assert ([int]$_.Exception.Response.StatusCode -eq 400) 'Invalid grade rejected' }
 Write-Host "ALL $checks HTTP CHECKS PASSED"

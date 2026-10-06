@@ -52,11 +52,12 @@ app.Use(async (ctx, next) => {
 app.UseDefaultFiles(); app.UseStaticFiles(); app.UseRateLimiter();
 var api = app.MapGroup("/api").RequireRateLimiting("api");
 api.MapGet("/health", (AiCoach ai) => Results.Ok(new { ok = true, apiConfigured = ai.Configured, localModel = LocalModel.Version, trainingExamples = LocalModel.Training.Values.Sum(x => x.Length) }));
-api.MapPost("/start", (HttpContext ctx) => {
+api.MapPost("/start", (StartRequest data, HttpContext ctx) => {
+    if (data.Grade is < 5 or > 9) return Results.BadRequest(new { error = "Обери клас від 5 до 9." });
     if (ctx.Request.Cookies.TryGetValue("drib-session", out var old)) sessions.TryRemove(old, out var removed);
     if (sessions.Count >= 1000) return Results.Problem("Забагато активних сесій. Спробуй пізніше.", statusCode: 503);
     var id = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24));
-    var lesson = new Lesson(); sessions[id] = lesson;
+    var lesson = new Lesson(data.Grade, Random.Shared.Next()); sessions[id] = lesson;
     ctx.Response.Cookies.Append("drib-session", id, new CookieOptions { HttpOnly = true, SameSite = SameSiteMode.Strict, IsEssential = true, Secure = ctx.Request.IsHttps, MaxAge = TimeSpan.FromMinutes(30) });
     return Results.Ok(lesson.View());
 });
@@ -117,3 +118,4 @@ api.MapGet("/plan", async (HttpContext ctx) => {
 app.Run();
 public record Submission(string? Answer, string? Reasoning, bool ApiConsent, int Revision);
 public record RevisionRequest(int Revision);
+public record StartRequest(int Grade = 6);

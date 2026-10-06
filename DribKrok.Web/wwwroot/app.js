@@ -29,7 +29,9 @@ function fraction(n,d) {
 }
 function draw() {
   $('welcome').hidden=!!state; $('lesson').hidden=!state || state.finished; $('summary').hidden=!state?.finished;
+  $('grade-badge').textContent=state ? `${state.grade} КЛАС` : '5–9 КЛАС';
   if(!state) return;
+  $('grade').value=state.grade;
   const e=state.exercise;
   $('round-name').textContent=`ВПРАВА 0${state.round+1} / 03`;
   $('phase').textContent=state.transfer?'Самостійно':'Разом із помічником';
@@ -41,8 +43,8 @@ function draw() {
   for(const [n,d] of [[e.a,e.b],[e.c,e.d]]) {
     const group=document.createElement('div');group.className='bar-group';
     const bar=document.createElement('div');bar.className='bar';bar.setAttribute('aria-hidden','true');
-    for(let i=0;i<d;i++){const piece=document.createElement('i');if(i<n)piece.className='filled';bar.append(piece);}
-    const caption=document.createElement('small');caption.textContent=`${n} із ${d} рівних частин`;group.append(bar,caption);$('fraction-bars').append(group);
+    for(let i=0;i<d;i++){const piece=document.createElement('i');if(i<Math.abs(n))piece.className='filled';bar.append(piece);}
+    const caption=document.createElement('small');caption.textContent=`${n < 0 ? "Мінус " : ""}${Math.abs(n)} із ${d} рівних частин${n < 0 ? " (показано модуль)" : ""}`;group.append(bar,caption);$('fraction-bars').append(group);
   }
   [...$('steps').children].forEach((s,i)=>s.classList.toggle('current',i===state.stage));
   $('steps').hidden=state.transfer;
@@ -65,7 +67,7 @@ function draw() {
     $('plan').replaceChildren(...state.plan.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
   }
 }
-async function start(){state=await request('start',{});$('answer').value='';$('reasoning').value='';draw();$('answer').focus();}
+async function start(){state=await request('start',{grade:Number($('grade').value)});$('answer').value='';$('reasoning').value='';draw();$('answer').focus();}
 $('start').addEventListener('click',()=>action(start));
 $('again').addEventListener('click',()=>action(start));
 $('answer-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{
@@ -77,6 +79,7 @@ $('answer-form').addEventListener('submit',event=>{event.preventDefault();action
 $('hint').addEventListener('click',()=>action(async()=>{state=await request('hint',{revision:state.revision});draw();$('feedback').focus();}));
 $('next').addEventListener('click',()=>action(async()=>{state=await request('next',{revision:state.revision});$('answer').value='';$('reasoning').value='';draw();if(!state.finished)$('answer').focus();else $('summary').scrollIntoView({behavior:'smooth'});}));
 function erase(){return action(async()=>{await request('reset',{});state=null;$('answer').value='';$('reasoning').value='';$('api-consent').checked=false;mode();draw();$('start').focus();});}
+$('choose-level').addEventListener('click',erase);
 $('delete').addEventListener('click',erase);
 $('delete-mobile').addEventListener('click',erase);
 $('api-consent').addEventListener('change',mode);
