@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../DribKrok.Core/DribKrok.Core.csproj" /><ProjectReference Include="..\DribKrok.Telegram\DribKrok.Telegram.csproj" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../DribKrok.Core/DribKrok.Core.csproj" /></ItemGroup>
 </Project>

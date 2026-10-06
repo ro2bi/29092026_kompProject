@@ -15,7 +15,7 @@ function Answer($value, $reason = '') {
     $script:state = Post 'answer' @{answer=$value; reasoning=$reason; apiConsent=$false; revision=$script:state.revision}
 }
 $health = Invoke-RestMethod "$base/health"
-Assert ($health.ok -and $health.trainingExamples -eq 50) 'Server and local model ready'
+Assert ($health.ok -and $health.trainingExamples -eq 60) 'Server and local model ready'
 $script:state = Post 'start' @{}
 Assert ($state.stage -eq 0) 'Create session'
 $cookie = $session.Cookies.GetCookies([uri]$base) | Where-Object Name -eq 'drib-session'
