@@ -82,7 +82,24 @@ api.MapPost("/answer", async (Submission data, HttpContext ctx, AiCoach ai) => {
         if (data.Revision != lesson.Revision) return Results.Conflict(new { error = "Крок уже змінився. Онови сторінку." });
         if (!lesson.Complete) {
             var prediction = await ai.Predict(data.Reasoning, data.ApiConsent, ctx.RequestAborted);
+            var previousSteps = lesson.CorrectSteps;
+            var previousStage = lesson.Stage;
+            var previousQuestion = lesson.Question;
             lesson.Answer(data.Answer, data.Reasoning, prediction);
+            if (!string.IsNullOrWhiteSpace(data.Reasoning)) {
+                var correct = lesson.CorrectSteps > previousSteps;
+                var context = System.Text.Json.JsonSerializer.Serialize(new {
+                    exercise = lesson.Exercise.Expression, question = previousQuestion, stage = previousStage,
+                    answer = data.Answer, reasoning = data.Reasoning, stepAccepted = correct,
+                    verification = lesson.Message, independent = lesson.Transfer
+                });
+                var comment = await ai.Review(context, data.ApiConsent, ctx.RequestAborted);
+                ctx.RequestAborted.ThrowIfCancellationRequested();
+                var fallback = correct
+                    ? "Молодець, числовий крок правильний! Детальний аналіз твого пояснення зараз недоступний — правильне число саме по собі не підтверджує весь хід думок."
+                    : "Цей крок ще не зараховано. Переглянь результат перевірки. Детальний аналіз міркування зараз недоступний.";
+                lesson.SetReasoningComment(comment ?? fallback, comment != null ? "Gemini API · аналіз міркування" : "Локальна перевірка · без аналізу тексту");
+            }
         }
         return Results.Ok(lesson.View());
     } finally { lesson.Gate.Release(); }

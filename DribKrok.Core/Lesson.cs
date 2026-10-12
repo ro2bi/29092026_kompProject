@@ -47,6 +47,9 @@ public sealed class Lesson
     public bool Transfer => Round == 2;
     public bool Complete => Finished || (Transfer ? Stage == 1 : Stage == 3);
     public string Message { get; private set; } = "Почнімо з однакового розміру частинок. Яке число ділиться на обидва знаменники без остачі?";
+    public string ReasoningComment { get; private set; } = "";
+    public string ReasoningSource { get; private set; } = "";
+    public void SetReasoningComment(string text, string source) { ReasoningComment = text; ReasoningSource = source; }
     public string Tone { get; private set; } = "neutral";
     public string ModelSource { get; set; } = "Ще не використано";
     public string ModelLabel { get; private set; } = "";
@@ -61,7 +64,7 @@ public sealed class Lesson
     public object View() => new {
         grade = Grade, levelDescription = LevelDescription, revision = Revision, round = Round, stage = Stage, denominator = Denominator, transfer = Transfer,
         complete = Complete, finished = Finished, exercise = new { Exercise.A, Exercise.B, Exercise.C, Exercise.D, Exercise.Expression, Exercise.Context },
-        question = Question, message = Message, tone = Tone, attempts = Attempts, hints = Hints,
+        reasoningComment = ReasoningComment, reasoningSource = ReasoningSource, question = Question, message = Message, tone = Tone, attempts = Attempts, hints = Hints,
         correctSteps = CorrectSteps, work = Work.ToArray(), modelSource = ModelSource, modelLabel = ModelLabel,
         plan = Plan(), gaps = Gaps.Select(x => new { label = GapName(x.Key), count = x.Value }).ToArray()
     };
@@ -87,6 +90,7 @@ public sealed class Lesson
     public void Answer(string answer, string reasoning, Prediction prediction)
     {
         if (Complete) return;
+        ReasoningComment = ""; ReasoningSource = "";
         Revision++; Attempts++; Tone = "retry"; ModelLabel = GapName(prediction.Label);
         ModelSource = prediction.Source;
         var e = Exercise;
@@ -188,6 +192,7 @@ public sealed class Lesson
         if (!Complete || Finished) return;
         Revision++;
         if (Round == 2) { Finished = true; return; }
+        ReasoningComment = ""; ReasoningSource = "";
         Round++; Stage = 0; Denominator = 0; Work.Clear(); Tone = "neutral";
         Exercise = Round == 1 && Gaps.ContainsKey("unscaled_numerator")
             ? Curriculum.Remediation(Grade, route[0], route[2], route[1]) : route[Round];

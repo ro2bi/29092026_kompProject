@@ -50,6 +50,10 @@ function draw() {
   $('steps').hidden=state.transfer;
   [...$('route').children].forEach((s,i)=>{s.classList.toggle('current',i===state.round);if(i===state.round)s.setAttribute('aria-current','step');else s.removeAttribute('aria-current');});
   $('work').replaceChildren(...state.work.map(w=>{const p=document.createElement('p');p.textContent='✓ '+w;return p;}));
+  $('reasoning-comment').textContent=state.reasoningComment || '';
+  $('reasoning-source').textContent=state.reasoningSource || '';
+  $('reasoning-review').hidden=!state.reasoningComment;
+  if(state.complete) $('next').before($('reasoning-review')); else $('reasoning').after($('reasoning-review'));
   $('question').textContent=state.question;
   $('feedback').textContent=state.message;
   $('feedback').parentElement.classList.toggle('success',state.tone==='success');
@@ -76,7 +80,7 @@ $('answer-form').addEventListener('submit',event=>{event.preventDefault();action
   const oldStage=state.stage;
   state=await request('answer',{answer:$('answer').value,reasoning:$('reasoning').value,apiConsent:$('api-consent').checked,revision:state.revision});
   if(state.stage!==oldStage){$('answer').value='';$('reasoning').value='';}
-  draw();$('feedback').focus();
+  draw();if(state.reasoningComment) $('reasoning-review').scrollIntoView({block:'nearest',behavior:'smooth'}); else $('feedback').focus();
 });});
 $('ask-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{
   $('ask-status').textContent='Помічник готує відповідь…';
@@ -99,7 +103,7 @@ action(async()=>{
   $('api-consent').checked=false;
   $('consent-label').textContent=`Дозволяю передавати мої пояснення та запитання до ${provider}`;
   $('api-consent').disabled=!configured;
-  $('api-note').textContent=configured?'Надсилається пояснення або запитання. Дозвіл можна вимкнути будь-коли.':'API ще не налаштовано. Локальна модель вже працює без ключа.';
+  $('api-note').textContent=configured?'Для аналізу міркування надсилаються також приклад, відповідь і результат перевірки. Дозвіл можна вимкнути будь-коли.':'API ще не налаштовано. Локальна модель вже працює без ключа.';
   mode();
   const response=await fetch('/api/state');if(response.ok)state=await response.json();draw();
 });
