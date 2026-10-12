@@ -136,10 +136,32 @@ try { await telegram.Call("getMe", new {}, default); Check(false, "Expected Tele
 catch (TelegramFailure e) { Check(e.RetryAfter == 7 && !e.ToString().Contains("fake-test-token"), "Rate limit and sanitized errors"); }
 Console.WriteLine($"ALL {passed} CHECKS PASSED, including Telegram mocks.");
 
+var geminiHandler = new FakeHandler();
+using var geminiHttp = new HttpClient(geminiHandler);
+var gemini = new CoachClient(model, geminiHttp, "fake-gemini-secret", "gemini-2.5-flash-lite", "gemini");
+await gemini.Predict("Додаю знаменники", false, default);
+await gemini.Predict("", true, default);
+Check(geminiHandler.Calls == 0, "Gemini does not send without consent or explanation");
+geminiHandler.Body = """{"candidates":[{"finishReason":"STOP","content":{"parts":[{"text":"{\"label\":\"add_denominators\"}"}]}}]}""";
+Check((await gemini.Predict("Додаю знаменники", true, default)).Source == "Gemini API", "Gemini parses allowed category");
+Check(geminiHandler.Uri!.Host == "generativelanguage.googleapis.com" && !geminiHandler.Uri.ToString().Contains("fake-gemini-secret") && geminiHandler.HasGeminiHeader, "Gemini key only in header");
+using(var payload = JsonDocument.Parse(geminiHandler.RequestBody!)) {
+    Check(payload.RootElement.GetProperty("generationConfig").GetProperty("responseSchema").GetProperty("properties").GetProperty("label").GetProperty("enum").GetArrayLength() == 6, "Gemini constrained schema");
+    Check(!payload.RootElement.TryGetProperty("store", out _), "No unsupported OpenAI store flag sent to Gemini");
+}
+foreach (var body in new[] { "{}", "{\"candidates\":[]}", "not json", """{"candidates":[{"finishReason":"SAFETY"}]}""", """{"candidates":[{"finishReason":"STOP","content":{"parts":[{"text":"{\"label\":\"7/12\"}"}]}}]}""" }) {
+    geminiHandler.Body = body;
+    Check((await gemini.Predict("Додаю знаменники", true, default)).Source.StartsWith("Локальна"), "Gemini invalid or blocked output falls back");
+}
+geminiHandler.Status = HttpStatusCode.TooManyRequests;
+Check((await gemini.Predict("Додаю знаменники", true, default)).Source.Contains("429"), "Gemini quota fallback is explained");
+Console.WriteLine($"ALL {passed} CHECKS PASSED, including Gemini.");
+
 sealed class FakeHandler : HttpMessageHandler {
+    public Uri? Uri; public bool HasGeminiHeader;
     public int Calls; public string? RequestBody; public string Body="{}"; public HttpStatusCode Status=HttpStatusCode.OK;
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken ct) {
-        Calls++; RequestBody=await request.Content!.ReadAsStringAsync(ct);
+        Calls++; Uri=request.RequestUri; HasGeminiHeader=request.Headers.Contains("x-goog-api-key"); RequestBody=await request.Content!.ReadAsStringAsync(ct);
         return new(Status){Content=new StringContent(Body)};
     }
 }

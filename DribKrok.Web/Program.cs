@@ -2,14 +2,14 @@ using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
 using DribKrok.Core;
 
-// Environment variables take priority. Only the two documented names are loaded from .env.
+// Environment variables take priority. Only documented names are loaded from .env.
 foreach (var path in new[] { Path.Combine(Directory.GetCurrentDirectory(), ".env"), Path.Combine(Directory.GetCurrentDirectory(), "..", ".env") })
 {
     if (!File.Exists(path)) continue;
     foreach (var line in File.ReadLines(path))
     {
         var pair = line.Split('=', 2);
-        if (pair.Length == 2 && pair[0].Trim() is "OPENAI_API_KEY" or "OPENAI_MODEL" && string.IsNullOrEmpty(Environment.GetEnvironmentVariable(pair[0].Trim())))
+        if (pair.Length == 2 && pair[0].Trim() is "OPENAI_API_KEY" or "OPENAI_MODEL" or "AI_PROVIDER" or "GEMINI_API_KEY" or "GEMINI_MODEL" && string.IsNullOrEmpty(Environment.GetEnvironmentVariable(pair[0].Trim())))
             Environment.SetEnvironmentVariable(pair[0].Trim(), pair[1].Trim().Trim('"', '\''));
     }
 }
@@ -51,7 +51,7 @@ app.Use(async (ctx, next) => {
 });
 app.UseDefaultFiles(); app.UseStaticFiles(); app.UseRateLimiter();
 var api = app.MapGroup("/api").RequireRateLimiting("api");
-api.MapGet("/health", (AiCoach ai) => Results.Ok(new { ok = true, apiConfigured = ai.Configured, localModel = LocalModel.Version, trainingExamples = LocalModel.Training.Values.Sum(x => x.Length) }));
+api.MapGet("/health", (AiCoach ai) => Results.Ok(new { ok = true, apiConfigured = ai.Configured, apiProvider = ai.ProviderName, localModel = LocalModel.Version, trainingExamples = LocalModel.Training.Values.Sum(x => x.Length) }));
 api.MapPost("/start", (StartRequest data, HttpContext ctx) => {
     if (data.Grade is < 5 or > 9) return Results.BadRequest(new { error = "Обери клас від 5 до 9." });
     if (ctx.Request.Cookies.TryGetValue("drib-session", out var old)) sessions.TryRemove(old, out var removed);

@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-let state = null, busy = false, configured = false;
+let state = null, busy = false, configured = false, provider = '';
 const names = ['Знайди свій спосіб', 'Закріпи навичку', 'Спробуй самостійно'];
 async function request(path, body) {
   const response = await fetch('/api/' + path, body === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -13,7 +13,7 @@ async function request(path, body) {
   return response.json();
 }
 function mode() {
-  $('mode').textContent = configured && $('api-consent').checked ? 'API увімкнено' : 'Локальний ШІ';
+  $('mode').textContent = configured && $('api-consent').checked ? `${provider} увімкнено` : 'Локальний ШІ';
 }
 async function action(fn) {
   if(busy) return;
@@ -88,7 +88,9 @@ $('download').addEventListener('click',()=>{
   const a=document.createElement('a');a.href='/api/plan';a.download='DribKrok-plan.txt';a.click();
 });
 action(async()=>{
-  const health=await request('health');configured=health.apiConfigured;
+  const health=await request('health');configured=health.apiConfigured;provider=health.apiProvider;
+  $('api-consent').checked=false;
+  $('consent-label').textContent=`Дозволяю передавати моє пояснення до ${provider}`;
   $('api-consent').disabled=!configured;
   $('api-note').textContent=configured?'Надсилається лише пояснення. Дозвіл можна вимкнути будь-коли.':'API ще не налаштовано. Локальна модель вже працює без ключа.';
   mode();
