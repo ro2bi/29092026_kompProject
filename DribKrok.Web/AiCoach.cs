@@ -9,6 +9,11 @@ public sealed class AiCoach(LocalModel local, IHttpClientFactory clients, IConfi
     private string? Model => Provider == "gemini" ? config["GEMINI_MODEL"] ?? "gemini-3.5-flash-lite" : config["OPENAI_MODEL"];
     public bool Configured => Provider is "gemini" or "openai" && !string.IsNullOrWhiteSpace(Key) && !string.IsNullOrWhiteSpace(Model);
     public const string Prompt = CoachClient.Prompt;
+    public async Task<string?> Explain(string question, bool consent, CancellationToken ct) {
+        if (!consent || !Configured || Provider != "gemini") return null;
+        using var client = clients.CreateClient("ai");
+        return await new CoachClient(local, client, Key, Model, Provider).Explain(question, ct);
+    }
     public async Task<Prediction> Predict(string reasoning, bool consent, CancellationToken ct)
     {
         using var client = clients.CreateClient("ai");

@@ -93,11 +93,12 @@ api.MapPost("/ask", async (QuestionRequest data, HttpContext ctx, AiCoach ai) =>
     await lesson.Gate.WaitAsync(ctx.RequestAborted);
     try {
         if (data.Revision != lesson.Revision) return Results.Conflict();
-        var prediction = !lesson.Complete && !lesson.Transfer
-            ? await ai.Predict(data.Question, data.ApiConsent, ctx.RequestAborted)
-            : new Prediction("unsure", 0, "Локальні правила");
+        var explanation = !lesson.Complete && !lesson.Transfer
+            ? await ai.Explain(data.Question, data.ApiConsent, ctx.RequestAborted) : null;
+        var source = explanation != null ? "Gemini API · відповідь на запитання"
+            : data.ApiConsent && ai.Configured && ai.Provider == "gemini" ? "Довідкове пояснення · Gemini не відповів" : "Довідкове пояснення · без генеративного API";
         ctx.RequestAborted.ThrowIfCancellationRequested();
-        lesson.Ask(data.Question, prediction);
+        lesson.Ask(data.Question, new Prediction("unsure", 0, source), explanation);
         return Results.Ok(lesson.View());
     } finally { lesson.Gate.Release(); }
 });

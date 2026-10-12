@@ -165,6 +165,19 @@ asking.Ask("Дай відповідь", new Prediction("answer_request", 1, "tes
 Check(!asking.Message.Contains("7/12"), "Question cannot reveal solution");
 Console.WriteLine($"ALL {passed} CHECKS PASSED, including questions.");
 
+geminiHandler.Status = HttpStatusCode.OK;
+geminiHandler.Body = """{"candidates":[{"finishReason":"STOP","content":{"parts":[{"text":"Кратне ділиться на число без остачі."}]}}]}""";
+var explanation = await gemini.Explain("Що таке кратне?", default);
+Check(explanation == "Кратне ділиться на число без остачі.", "Generate actual question answer");
+using(var payload = JsonDocument.Parse(geminiHandler.RequestBody!)) {
+    Check(payload.RootElement.GetProperty("contents")[0].GetProperty("parts")[0].GetProperty("text").GetString() == "Що таке кратне?", "Send exact question to generator");
+}
+asking.Ask("Що таке кратне?", neutral, explanation);
+Check(asking.Message == explanation && asking.Stage == 0 && asking.Attempts == 0, "Generated answer does not advance lesson");
+geminiHandler.Body = "{}";
+Check(await gemini.Explain("Що таке кратне?", default) == null, "Generation failure allows reference fallback");
+Console.WriteLine($"ALL {passed} CHECKS PASSED");
+
 sealed class FakeHandler : HttpMessageHandler {
     public Uri? Uri; public bool HasGeminiHeader;
     public int Calls; public string? RequestBody; public string Body="{}"; public HttpStatusCode Status=HttpStatusCode.OK;

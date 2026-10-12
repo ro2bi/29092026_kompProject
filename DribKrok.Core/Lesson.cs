@@ -150,14 +150,16 @@ public sealed class Lesson
         };
     }
 
-    public void Ask(string question, Prediction prediction)
+    public void Ask(string question, Prediction prediction, string? explanation = null)
     {
         if (Complete) { Message = "Цю вправу вже завершено. Перейди далі, щоб потренуватися на новому прикладі."; return; }
         if (Transfer) { Hint(); return; }
         Revision++; Hints++; Tone = "neutral";
         ModelSource = prediction.Source; ModelLabel = GapName(prediction.Label);
+        if (!string.IsNullOrWhiteSpace(explanation)) { Message = explanation; ModelLabel = ""; return; }
         var q = question.ToLowerInvariant();
         Message = prediction.Label == "answer_request" ? "Допоможу розібратися зі способом, але готову відповідь до вправи не називатиму. " + Question
+            : q.Contains("кратн") ? "Кратні числа — результати множення числа на цілі числа. Наприклад, кратні п’яти: п’ять, десять, п’ятнадцять. Спільне кратне двох чисел ділиться на обидва без остачі."
             : q.Contains("скор") ? "Скоротити дріб — означає поділити чисельник і знаменник на той самий спільний дільник. Значення дробу не змінюється. Нескорочену правильну відповідь також буде зараховано."
             : q.Contains("мінус") || q.Contains("минус") || q.Contains("знак") || prediction.Label == "sign_error" ? "За однакових знаків додавай модулі чисельників і зберігай знак. За різних — відніми менший модуль від більшого та залиш знак більшого. Спершу зроби знаменники однаковими."
             : q.Contains("чисельник") || q.Contains("числитель") || prediction.Label == "unscaled_numerator" ? "Чисельник — число над рискою: він показує кількість частинок. Коли множиш знаменник, помнож чисельник на те саме число, щоб значення дробу не змінилося."
