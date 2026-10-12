@@ -3,3 +3,5 @@
 @media(max-width:420px){.hero-art{display:none}}
 
 .welcome{flex-wrap:wrap;gap:20px}.welcome select{display:block;max-width:100%;padding:12px;margin-top:8px;border:1px solid #b8cbc4;border-radius:10px;background:white;color:#174f46;font:inherit}
+
+.coach.card{background:linear-gradient(145deg,#e8f8bb,#d9f3e7);border:2px solid #80b85a;box-shadow:0 10px 28px #174f4620}.coach-heading h2{font-size:20px;color:#123e30}.coach-icon{background:#286d47;color:#fff}.coach #feedback{background:#ffffffbf;border-left:4px solid #398153;border-radius:8px;padding:16px;font-size:15px;color:#173f30}.coach small,.model-details{color:#385540}#ask-form{display:grid;gap:10px;margin:18px 0}#ask-form label{font-weight:700}#ask-question{width:100%;min-width:0;resize:vertical;background:#fff;border:1px solid #8db99a;border-radius:10px;padding:12px}#ask-send{justify-self:start}#ask-status{font-size:11px}

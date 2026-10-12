@@ -157,6 +157,14 @@ geminiHandler.Status = HttpStatusCode.TooManyRequests;
 Check((await gemini.Predict("Додаю знаменники", true, default)).Source.Contains("429"), "Gemini quota fallback is explained");
 Console.WriteLine($"ALL {passed} CHECKS PASSED, including Gemini.");
 
+var asking = new Lesson();
+asking.Ask("Чому змінюється чисельник?", neutral);
+Check(asking.Stage == 0 && asking.Attempts == 0 && asking.CorrectSteps == 0 && asking.Hints == 1, "Question cannot change answer progress");
+Check(asking.Message.Contains("над рискою"), "Question receives numerator explanation");
+asking.Ask("Дай відповідь", new Prediction("answer_request", 1, "test"));
+Check(!asking.Message.Contains("7/12"), "Question cannot reveal solution");
+Console.WriteLine($"ALL {passed} CHECKS PASSED, including questions.");
+
 sealed class FakeHandler : HttpMessageHandler {
     public Uri? Uri; public bool HasGeminiHeader;
     public int Calls; public string? RequestBody; public string Body="{}"; public HttpStatusCode Status=HttpStatusCode.OK;

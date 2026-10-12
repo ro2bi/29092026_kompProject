@@ -87,6 +87,20 @@ api.MapPost("/answer", async (Submission data, HttpContext ctx, AiCoach ai) => {
         return Results.Ok(lesson.View());
     } finally { lesson.Gate.Release(); }
 });
+api.MapPost("/ask", async (QuestionRequest data, HttpContext ctx, AiCoach ai) => {
+    var lesson = Current(ctx); if (lesson == null) return Results.NotFound();
+    if (string.IsNullOrWhiteSpace(data.Question) || data.Question.Length > 500) return Results.BadRequest();
+    await lesson.Gate.WaitAsync(ctx.RequestAborted);
+    try {
+        if (data.Revision != lesson.Revision) return Results.Conflict();
+        var prediction = !lesson.Complete && !lesson.Transfer
+            ? await ai.Predict(data.Question, data.ApiConsent, ctx.RequestAborted)
+            : new Prediction("unsure", 0, "Локальні правила");
+        ctx.RequestAborted.ThrowIfCancellationRequested();
+        lesson.Ask(data.Question, prediction);
+        return Results.Ok(lesson.View());
+    } finally { lesson.Gate.Release(); }
+});
 api.MapPost("/hint", async (RevisionRequest data, HttpContext ctx) => {
     var lesson = Current(ctx); if (lesson == null) return Results.NotFound();
     await lesson.Gate.WaitAsync(ctx.RequestAborted);
@@ -119,3 +133,4 @@ app.Run();
 public record Submission(string? Answer, string? Reasoning, bool ApiConsent, int Revision);
 public record RevisionRequest(int Revision);
 public record StartRequest(int Grade = 6);
+public record QuestionRequest(string? Question, bool ApiConsent, int Revision);

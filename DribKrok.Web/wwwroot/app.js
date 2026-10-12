@@ -59,6 +59,8 @@ function draw() {
   $('answer-form').hidden=state.complete; $('next').hidden=!state.complete;
   $('next').textContent=state.transfer?'Показати мій результат →':'Наступна вправа →';
   $('hint').hidden=state.transfer;
+  $('ask-form').hidden=state.complete;
+  $('ask-status').textContent=state.transfer?'У самостійній вправі покрокові підказки недоступні.':'Запитання про знаменники, чисельники, знаки чи скорочення.';
   $('optional').textContent=state.transfer?'Потрібно для завершення':'Необов’язково';
   $('answer').placeholder=state.transfer || state.stage===2?'Наприклад: 3/5':state.stage===1?'Два чисельники через пробіл':'Напиши число';
   $('input-help').textContent=state.transfer || state.stage===2?'Формат: чисельник/знаменник. Рівні дроби теж приймаються.':state.stage===1?'Спочатку чисельник першого дробу, потім другого.':'Обери додатний спільний знаменник, не більше 120.';
@@ -67,7 +69,7 @@ function draw() {
     $('plan').replaceChildren(...state.plan.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
   }
 }
-async function start(){state=await request('start',{grade:Number($('grade').value)});$('answer').value='';$('reasoning').value='';draw();$('answer').focus();}
+async function start(){state=await request('start',{grade:Number($('grade').value)});$('answer').value='';$('reasoning').value='';$('ask-question').value='';draw();$('answer').focus();}
 $('start').addEventListener('click',()=>action(start));
 $('again').addEventListener('click',()=>action(start));
 $('answer-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{
@@ -75,6 +77,11 @@ $('answer-form').addEventListener('submit',event=>{event.preventDefault();action
   state=await request('answer',{answer:$('answer').value,reasoning:$('reasoning').value,apiConsent:$('api-consent').checked,revision:state.revision});
   if(state.stage!==oldStage){$('answer').value='';$('reasoning').value='';}
   draw();$('feedback').focus();
+});});
+$('ask-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{
+  $('ask-status').textContent='Помічник готує відповідь…';
+  try {state=await request('ask',{question:$('ask-question').value,apiConsent:$('api-consent').checked,revision:state.revision});$('ask-question').value='';draw();$('feedback').focus();}
+  finally {$('ask-status').textContent='Можеш поставити наступне запитання.';}
 });});
 $('hint').addEventListener('click',()=>action(async()=>{state=await request('hint',{revision:state.revision});draw();$('feedback').focus();}));
 $('next').addEventListener('click',()=>action(async()=>{state=await request('next',{revision:state.revision});$('answer').value='';$('reasoning').value='';draw();if(!state.finished)$('answer').focus();else $('summary').scrollIntoView({behavior:'smooth'});}));
@@ -90,9 +97,9 @@ $('download').addEventListener('click',()=>{
 action(async()=>{
   const health=await request('health');configured=health.apiConfigured;provider=health.apiProvider;
   $('api-consent').checked=false;
-  $('consent-label').textContent=`Дозволяю передавати моє пояснення до ${provider}`;
+  $('consent-label').textContent=`Дозволяю передавати мої пояснення та запитання до ${provider}`;
   $('api-consent').disabled=!configured;
-  $('api-note').textContent=configured?'Надсилається лише пояснення. Дозвіл можна вимкнути будь-коли.':'API ще не налаштовано. Локальна модель вже працює без ключа.';
+  $('api-note').textContent=configured?'Надсилається пояснення або запитання. Дозвіл можна вимкнути будь-коли.':'API ще не налаштовано. Локальна модель вже працює без ключа.';
   mode();
   const response=await fetch('/api/state');if(response.ok)state=await response.json();draw();
 });
